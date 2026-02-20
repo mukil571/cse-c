@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #f0c040;
+    --accent2: #e05c5c;
+    --text: #e8eaf0;
+    --muted: #6b7080;
+    --absent: #e05c5c18;
+    --absent-border: #e05c5c88;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  header {
+    max-width: 560px;
+    margin: 0 auto 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+  header h1 { font-family: 'DM Mono', monospace; font-size: 1.4rem; color: var(--accent); }
+  header p { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
+
+  .meta-row {
+    max-width: 560px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .meta-row input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    outline: none;
+  }
+  .meta-row input:focus { border-color: var(--accent); }
+  .session-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .session-toggle button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    border-radius: 0;
+  }
+  .session-toggle button.active { background: var(--accent); color: #0f1117; font-weight: 700; }
+
+  .stats-bar { max-width: 560px; margin: 0 auto 16px; }
+  .absent-badge {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--absent-border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--accent2);
+  }
+
+  .controls { max-width: 560px; margin: 0 auto 16px; display: flex; gap: 10px; }
+  button {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 700; }
+  button.primary:hover { background: #ffd060; }
+
+  .search-wrap { max-width: 560px; margin: 0 auto 14px; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    padding: 9px 14px;
+    border-radius: 8px;
+    outline: none;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+
+  .student-list { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; }
+  .student {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+    user-select: none;
+  }
+  .student:hover { border-color: var(--muted); }
+  .student.absent { background: var(--absent); border-color: var(--absent-border); }
+  .box {
+    width: 18px; height: 18px;
+    border: 2px solid var(--muted);
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .student.absent .box { background: var(--accent2); border-color: var(--accent2); }
+  .box::after { content: ''; display: none; width: 5px; height: 9px; border: 2px solid #fff; border-top: none; border-left: none; transform: rotate(45deg) translate(-1px,-1px); }
+  .student.absent .box::after { display: block; }
+  .roll { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); min-width: 72px; }
+  .name { font-size: 0.9rem; }
+
+  .report-section {
+    max-width: 560px;
+    margin: 32px auto 0;
+    border-top: 1px solid var(--border);
+    padding-top: 22px;
+  }
+  .report-section h2 { font-family: 'DM Mono', monospace; font-size: 0.95rem; color: var(--accent); margin-bottom: 14px; }
+  .report-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .tab {
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .tab.active { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 700; }
+  .report-box {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .report-box textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    resize: vertical;
+    min-height: 140px;
+    outline: none;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 0.78rem;
+    padding: 5px 12px;
+    border-radius: 6px;
+  }
+  .copy-btn.copied { background: #5cda8a22; border-color: #5cda8a; color: #5cda8a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Attendance Tracker</h1>
+  <p>Click a student to mark absent</p>
+</header>
+
+<div class="meta-row">
+  <input type="date" id="dateInput" style="width:150px">
+  <div class="session-toggle">
+    <button class="active" id="btnFN" onclick="setSession('FN')">FN</button>
+    <button id="btnAN" onclick="setSession('AN')">AN</button>
+  </div>
+  <input type="text" id="classInput" placeholder="Class / Section" style="width:150px">
+</div>
+
+<div class="stats-bar">
+  <div class="absent-badge">Absent: <span id="absentCount">0</span></div>
+</div>
+
+<div class="controls">
+  <button onclick="selectAll()">Clear All (All Present)</button>
+</div>
+
+<div class="search-wrap">
+  <input type="text" id="searchBox" placeholder="🔍  Search by name or roll number…" oninput="filterStudents()">
+</div>
+
+<div class="student-list" id="studentList"></div>
+
+<div class="report-section">
+  <h2>Absent Report</h2>
+  <div class="report-tabs">
+    <button class="tab active" onclick="switchTab(this,'both')">Roll + Name</button>
+    <button class="tab" onclick="switchTab(this,'names')">Names Only</button>
+    <button class="tab" onclick="switchTab(this,'rolls')">Roll Numbers Only</button>
+  </div>
+  <button class="primary" style="max-width:560px;width:100%;margin-bottom:10px;" onclick="generateReport()">Generate Report</button>
+  <div class="report-box">
+    <button class="copy-btn" id="copyBtn" onclick="copyReport()">Copy</button>
+    <textarea id="reportText" readonly></textarea>
+  </div>
+</div>
+
+<script>
+const students = [
+  { roll: "161", name: "JOHN SAJEEVAN J" },
+  { roll: "162", name: "SUDEEP C G" },
+  { roll: "163", name: "GOKUL ANANDH N S" },
+  { roll: "164", name: "ADITHYA N" },
+  { roll: "165", name: "RISHA S" },
+  { roll: "166", name: "KANIKA S" },
+  { roll: "167", name: "ABINAYA S" },
+  { roll: "168", name: "JAYASRI R" },
+  { roll: "169", name: "SHARAN S" },
+  { roll: "170", name: "HEMASHRI K" },
+  { roll: "171", name: "NETHRA M" },
+  { roll: "172", name: "SANJAI S" },
+  { roll: "173", name: "ABIVARSHINI C" },
+  { roll: "174", name: "SUNDHARRAJAN V" },
+  { roll: "175", name: "HASINI V" },
+  { roll: "176", name: "NITHIN PRATAP ANDIVEL" },
+  { roll: "177", name: "SUDARSAN S" },
+  { roll: "178", name: "BABYSHANITHI K" },
+  { roll: "179", name: "BHAVAN R" },
+  { roll: "***", name: "***** *" },
+  { roll: "181", name: "RASIKA M" },
+  { roll: "182", name: "ASHWIN V" },
+  { roll: "183", name: "AFSHEEN KHATHEEJA M" },
+  { roll: "184", name: "SURUTHI A" },
+  { roll: "185", name: "SAKTHI G" },
+  { roll: "186", name: "RAKESH J" },
+  { roll: "187", name: "SREEMATHI S S" },
+  { roll: "188", name: "YUVAN AKASH M" },
+  { roll: "189", name: "ASHIKA S" },
+  { roll: "190", name: "VAGISH RAMESH R" },
+  { roll: "191", name: "ANGELINA M" },
+  { roll: "192", name: "SHOBIKAA R" },
+  { roll: "193", name: "SALVIN MARIO S" },
+  { roll: "194", name: "AISWARIYA G" },
+  { roll: "195", name: "SWATHI A" },
+  { roll: "196", name: "SABARI SUKESH S" },
+  { roll: "197", name: "LIBIKA M (DC)" },
+  { roll: "198", name: "JAYAVARDHANI P N" },
+  { roll: "199", name: "ARULSELVAN M" },
+  { roll: "200", name: "SUBASRI S" },
+  { roll: "201", name: "SABRINA P" },
+  { roll: "202", name: "ASHYYANTH M G (DC)" },
+  { roll: "203", name: "DHARSHINI Y" },
+  { roll: "204", name: "JEEVITHA S" },
+  { roll: "205", name: "SANJANA SRI TV" },
+  { roll: "206", name: "GURUSHATH G" },
+  { roll: "207", name: "SURYA K M" },
+  { roll: "208", name: "GEETHASREE B" },
+  { roll: "209", name: "NAVEENTHRAN A" },
+  { roll: "210", name: "ALAVANTHAN S" },
+  { roll: "211", name: "VISHWA S P" },
+  { roll: "212", name: "DIVA G" },
+  { roll: "213", name: "JOSILDA A" },
+  { roll: "214", name: "MONICA A" },
+  { roll: "215", name: "MERIYAN JOE J" },
+  { roll: "216", name: "BHAVANAND S" },
+  { roll: "217", name: "NITHISH S" },
+  { roll: "218", name: "YAZHINI J" },
+  { roll: "219", name: "KEERTHIKA S" },
+  { roll: "220", name: "ASHWIN RAJ S" },
+  { roll: "221", name: "RADHESH R" },
+  { roll: "222", name: "YAGAVI M" },
+  { roll: "223", name: "THANISHAA A" },
+  { roll: "224", name: "JUBAIR AHAMED P" },
+  { roll: "225", name: "R HARISH HIMAVANTH" },
+  { roll: "226", name: "JEYA RAGUL M" },
+  { roll: "227", name: "RAGAVI R" },
+  { roll: "228", name: "SAIDHARANI K" },
+  { roll: "229", name: "KANIGASHREE V N" },
+  { roll: "230", name: "PUGAZHINIYAN P" },
+  { roll: "231", name: "KANISHKA M" },
+  { roll: "232", name: "HARDEEP ASHWIN S" },
+  { roll: "233", name: "BOOMIKA D M" },
+  { roll: "234", name: "VIJAY THIRUPARAR A" },
+  { roll: "235", name: "THIVIN KUMAR M" },
+  { roll: "236", name: "ADHITHYA K" },
+  { roll: "237", name: "SARVESH E S" },
+  { roll: "238", name: "M KAVYA" },
+  { roll: "239", name: "P VISHNUVARTHAN" },
+  { roll: "240", name: "YOGESWARI M" },
+];
+
+let absentSet = new Set();
+let currentTab = 'both';
+let session = 'FN';
+
+function init() {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const yyyy = today.getFullYear();
+  document.getElementById('dateInput').value = `${yyyy}-${mm}-${dd}`;
+  renderList(students);
+}
+
+function setSession(s) {
+  session = s;
+  document.getElementById('btnFN').classList.toggle('active', s === 'FN');
+  document.getElementById('btnAN').classList.toggle('active', s === 'AN');
+}
+
+function renderList(list) {
+  const el = document.getElementById('studentList');
+  el.innerHTML = '';
+  list.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'student' + (absentSet.has(s.roll) ? ' absent' : '');
+    div.dataset.roll = s.roll;
+    div.innerHTML = `<div class="box"></div><span class="roll">${s.roll}</span><span class="name">${s.name}</span>`;
+    div.onclick = () => toggle(s.roll);
+    el.appendChild(div);
+  });
+}
+
+function toggle(roll) {
+  absentSet.has(roll) ? absentSet.delete(roll) : absentSet.add(roll);
+  const card = document.querySelector(`.student[data-roll="${roll}"]`);
+  if (card) card.classList.toggle('absent', absentSet.has(roll));
+  document.getElementById('absentCount').textContent = absentSet.size;
+}
+
+function selectAll() {
+  absentSet.clear();
+  document.getElementById('absentCount').textContent = 0;
+  renderList(getFiltered());
+}
+
+function getFiltered() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  return q ? students.filter(s => s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q)) : students;
+}
+function filterStudents() { renderList(getFiltered()); }
+
+function formatDate() {
+  const raw = document.getElementById('dateInput').value;
+  if (!raw) return '';
+  const [y, m, d] = raw.split('-');
+  return `${d}-${m}-${y}`;
+}
+
+function buildReport() {
+  const absentList = students.filter(s => absentSet.has(s.roll));
+  const cls = document.getElementById('classInput').value.trim();
+  let lines = [];
+  lines.push(`Date: ${formatDate()} ${session}`);
+  if (cls) lines.push(`Class: ${cls}`);
+  lines.push(`Absentees:`);
+  if (absentList.length === 0) {
+    lines.push('Nil');
+  } else if (currentTab === 'both') {
+    absentList.forEach(s => lines.push(`${s.roll} - ${s.name}`));
+  } else if (currentTab === 'names') {
+    absentList.forEach(s => lines.push(s.name));
+  } else {
+    absentList.forEach(s => lines.push(s.roll));
+  }
+  return lines.join('\n');
+}
+
+function generateReport() {
+  document.getElementById('reportText').value = buildReport();
+  document.querySelector('.report-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchTab(btn, tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function copyReport() {
+  const text = document.getElementById('reportText').value;
+  if (!text) return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(showCopied).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.getElementById('reportText');
+  ta.removeAttribute('readonly');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    const ok = document.execCommand('copy');
+    if (ok) showCopied();
+  } catch(e) {}
+  ta.setAttribute('readonly', true);
+  window.getSelection().removeAllRanges();
+}
+
+function showCopied() {
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = 'Copied ✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+init();
+</script>
+</body>
+</html>
